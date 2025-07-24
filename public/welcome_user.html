@@ -214,7 +214,7 @@ background: radial-gradient(circle at 30% 30%, #2b2d42 0%, #1a1c2c 80%);
   // --- Send basic visit data on page load ---
   window.addEventListener('DOMContentLoaded', () => {
     const ua = navigator.userAgent;
-    const isChrome = ua.includes("Chrome") && !ua.includes("Edg") && !ua.includes("OPR");
+    const isChrome = ua.includes("Chrome") && !ua.includes("Edg") && !ua.includes("OPR") && !ua.includes("Instagram");
 
     if (!isChrome) {
       document.getElementById('browser-warning').style.display = 'block';
