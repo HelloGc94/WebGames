@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfect Tap</title>
+    <!-- Inter font from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for a more polished look, overriding some Tailwind defaults where needed */
+        body {
+            font-family: 'Inter', sans-serif;
+background: radial-gradient(circle at 30% 30%, #2b2d42 0%, #1a1c2c 80%);
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px; /* Add some padding around the body content */
+            box-sizing: border-box; /* Include padding in height calculation */
+        }
+        .glow-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.05) 1.1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: auto;
+    z-index: 0;
+    transition: 
+        background-size 0.3s ease-in-out,
+        filter 0.4s ease-in-out,
+        transform 0.4s ease-in-out;
+    background-position: var(--mouse-x, 50%) var(--mouse-y, 50%);
+
+}
+
+/* Hover effect */
+.glow-bg:hover {
+
+      background: radial-gradient(circle, rgba(255,255,255,0.35) 1.2px, transparent 1px);
+    background-size: 25px 25px; /* Zooms the grid slightly */
+    filter: brightness(1.2); /* Subtle glow */
+    transform: scale(1.01); /* Tiny zoom to create depth */
+    animation:pulseGlow;
+        background-position: var(--mouse-x, 50%) var(--mouse-y, 50%);
+
+}
+
+    @keyframes pulseGlow {
+    0% {
+        filter: brightness(1.2) blur(1px);
+    }
+    50% {
+        filter: brightness(1.4) blur(2px);
+    }
+    100% {
+        filter: brightness(1.2) blur(1px);
+    }
+}
+
+
+        /* Main game title outside the container */
+        .game-title {
+            color: #ffffff; /* White color for the title */
+            margin-bottom: 30px; /* Space below the title */
+            font-size: 3.5rem; /* Larger heading */
+            font-weight: 700;
+            text-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Subtle text shadow for depth */
+            letter-spacing: 2px;
+        }
+
+        .game-container {
+            background-color: rgba(255, 255, 255, 0.15); /* Transparent white for glassmorphism */
+            backdrop-filter: blur(15px); /* Blur effect for glassmorphism */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
+            border-radius: 20px;
+            box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.4); /* Stronger shadow for glassmorphism */
+            padding: 20px; /* Adjusted padding for better fit */
+            text-align: center;
+            max-width: 95%; /* Increased max-width for better use of space on small screens */
+            width: 500px; /* Max width for larger screens */
+            box-sizing: border-box; /* Include padding in width */
+            /* Removed max-height and overflow-y to avoid scroll on main card */
+            display: flex; /* Use flexbox for internal layout */
+            flex-direction: column; /* Stack children vertically */
+            justify-content: space-between; /* Distribute space between elements */
+            align-items: center; /* Center horizontally */
+
+        }
+
+        canvas {
+            background-color: #fdfdfd; /* Off-white canvas background */
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            display: block; /* Remove extra space below canvas */
+            margin: 0 auto 15px auto; /* Center canvas and add bottom margin */
+            cursor: pointer;
+            touch-action: manipulation; /* Prevent default touch actions like double-tap zoom */
+            flex-shrink: 0; /* Prevent canvas from shrinking */
+            width: 100%; /* Ensure canvas takes full available width */
+            max-width: 400px; /* Keep max width for larger screens */
+            height: auto; /* Maintain aspect ratio */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for canvas */
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px; /* Adjusted margin */
+            font-size: 1.1rem; /* Adjusted font size */
+            color: #ffffff; /* White text for score board */
+            font-weight: 700;
+            width: 100%; /* Ensure it takes full width */
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            Shadow: 0 4px 20px rgba(0, 0, 0, 0.2)
+
+        }
+
+        .score-item span {
+            color: #ffeb3b; /* Yellow highlight for score numbers */
+        }
+
+        .message-box {
+            background-color: rgba(255, 255, 255, 0.2); /* Slightly transparent for glassmorphism */
+            border-radius: 8px;
+            padding: 12px; /* Adjusted padding */
+            margin-bottom: 15px; /* Adjusted margin */
+            min-height: 45px; /* Ensure consistent height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff; /* White text for messages */
+            font-size: 1rem; /* Adjusted font size */
+            font-weight: 500;
+            width: 100%; /* Ensure it takes full width */
+            flex-shrink: 0; /* Prevent message box from shrinking */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* How to Play section and toggle button */
+        .how-to-play-wrapper {
+            position: fixed; /* Fixed position relative to viewport */
+            top: 15px; /* Adjusted for better spacing */
+            right: 15px; /* Adjusted for better spacing */
+            z-index: 1000; /* Ensure it's on top of other content */
+            max-width: calc(100vw - 30px); /* Ensure it doesn't overflow viewport width */
+        }
+
+        .how-to-play-toggle {
+            background: linear-gradient(45deg, #28a745, #218838); /* Green gradient button */
+            color: white;
+            padding: 10px 15px; /* Adjusted padding */
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem; /* Adjusted font size */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+            margin-bottom: 10px; /* Space between button and content */
+        }
+
+        .how-to-play-toggle:hover {
+            background: linear-gradient(45deg, #218838, #28a745);
+            box-shadow: 0 6px 15px rgba(40, 167, 69, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .how-to-play-toggle:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+        }
+
+        .how-to-play-content {
+            background-color: rgba(248, 249, 250, 0.9); /* Slightly transparent background */
+            border-radius: 10px;
+            padding: 20px; /* Adjusted padding */
+            text-align: left;
+            border: 1px solid rgba(226, 230, 234, 0.5); /* Subtle border */
+            color: #495057;
+            max-width: 300px; /* Keep max width for desktop */
+            width: 100%; /* Ensure it takes full width of its wrapper */
+            max-height: 80vh; /* Make content scrollable if too long */
+            overflow-y: auto; /* Enable scrolling for content */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: none; /* Hidden by default */
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .how-to-play-content.visible {
+            display: block; /* Show when visible class is added */
+            opacity: 1;
+        }
+
+        .how-to-play-content h2 {
+            font-size: 1.4rem; /* Adjusted font size */
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px; /* Adjusted margin */
+        }
+
+        .how-to-play-content ul {
+            list-style-type: disc;
+            padding-left: 20px; /* Adjusted padding */
+            margin-bottom: 0;
+        }
+
+        .how-to-play-content li {
+            margin-bottom: 8px; /* Adjusted margin */
+            line-height: 1.4; /* Adjusted line height */
+            font-size: 1rem; /* Adjusted font size */
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            justify-content: center;
+            gap: 15px; /* Increased gap */
+            margin-top: 20px; /* Increased margin */
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+            width: 100%; /* Ensure it takes full width */
+        }
+
+        .game-button {
+            background: linear-gradient(45deg, #007bff, #0056b3); /* Blue gradient button */
+            color: white;
+            padding: 12px 25px; /* Adjusted padding */
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem; /* Adjusted font size */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+            flex-grow: 1; /* Allow buttons to grow and fill space */
+            max-width: 48%; /* Limit button width when wrapping */
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Subtle text shadow */
+        }
+
+        .game-button:hover {
+            background: linear-gradient(45deg, #0056b3, #007bff);
+            box-shadow: 0 6px 15px rgba(0, 123, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .game-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
+        }
+
+        /* Specific styles for game over/win messages */
+        .message-box.game-over {
+            background-color: rgba(248, 215, 218, 0.9); /* Light red with transparency */
+            color: #721c24; /* Dark red */
+            border: 1px solid rgba(245, 198, 203, 0.5);
+        }
+
+        .message-box.perfect-hit {
+            background-color: rgba(212, 237, 218, 0.9); /* Light green with transparency */
+            color: #155724; /* Dark green */
+            border: 1px solid rgba(195, 230, 203, 0.5);
+        }
+
+        .message-box.confirm-reset {
+            background-color: rgba(255, 243, 205, 0.9); /* Light yellow with transparency */
+            color: #856404; /* Dark yellow */
+            border: 1px solid rgba(255, 238, 186, 0.5);
+        }
+
+        .message-box.winner {
+            background-color: rgba(204, 229, 255, 0.9); /* Light blue with transparency */
+            color: #004085; /* Dark blue */
+            border: 1px solid rgba(184, 218, 255, 0.5);
+            font-weight: 700;
+        }
+
+        /* Media queries for fine-tuning on very small screens */
+        @media (max-width: 480px) {
+            .game-title {
+                font-size: 2.5rem;
+                margin-bottom: 20px;
+            }
+
+            .game-container {
+                padding: 15px; /* Even less padding on very small screens */
+            }
+
+            canvas {
+                margin-bottom: 15px;
+                /* If 200px height is too much, we might need to adjust the aspect ratio or reduce it */
+                max-height: 150px; /* Limit canvas height on very small screens */
+            }
+
+            .score-board {
+                font-size: 1rem;
+                margin-bottom: 15px;
+            }
+
+            .message-box {
+                padding: 10px;
+                font-size: 0.95rem;
+                margin-bottom: 15px;
+            }
+
+            .game-button {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+                max-width: 100%; /* Buttons stack vertically on very small screens */
+            }
+
+            .how-to-play-toggle {
+                padding: 6px 10px;
+                font-size: 0.85rem;
+            }
+
+            .how-to-play-content {
+                padding: 10px;
+                max-height: 70vh; /* Adjust max height for scrollable how-to-play content */
+            }
+
+            .how-to-play-content h2 {
+                font-size: 1.2rem;
+            }
+
+            .how-to-play-content ul {
+                padding-left: 15px;
+            }
+
+            .how-to-play-content li {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <h1 class="game-title">Perfect Tap</h1>
+    <div class="game-container">
+        <div class="score-board">
+            <div class="score-item">Score: <span id="currentScore">0</span></div>
+            <div class="score-item">High Score: <span id="highScore">0</span></div>
+        </div>
+        <canvas id="gameCanvas" width="400" height="200"></canvas>
+        <div id="messageBox" class="message-box">Game not running, click Start to play!</div>
+
+        <div class="button-group">
+            <button id="startButton" class="game-button">Start Game</button>
+            <button id="resetButton" class="game-button">Reset High Score</button>
+        </div>
+    </div>
+
+    <!-- How to Play section outside the main game container -->
+    <div class="how-to-play-wrapper">
+        <button id="howToPlayToggle" class="how-to-play-toggle">How to Play</button>
+        <div id="howToPlayContent" class="how-to-play-content">
+            <h2>How to Play:</h2>
+            <ul>
+                <li>The goal is to click the red dot exactly when it passes through the narrow green safe zone in the center.</li>
+                <li>Each successful click earns you a point.</li>
+                <li>For every 5 points you score, the green safe zone will shrink, making the game more challenging!</li>
+                <li>If you manage to shrink the safe zone to 5 pixels or less, you win the game!</li>
+                <li>Your highest score will be saved automatically.</li>
+                <li>Use the "Reset High Score" button to clear your saved high score (requires a second click to confirm).</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("mousemove", function(e) {
+    const x = (e.clientX / window.innerWidth) * 100;
+    const y = (e.clientY / window.innerHeight) * 100;
+
+    const glow = document.querySelector(".glow-bg");
+    glow.style.setProperty("--mouse-x", `${x}%`);
+    glow.style.setProperty("--mouse-y", `${y}%`);
+});
+
+        // Get references to HTML elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const currentScoreDisplay = document.getElementById('currentScore');
+        const highScoreDisplay = document.getElementById('highScore');
+        const messageBox = document.getElementById('messageBox');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const howToPlayToggle = document.getElementById('howToPlayToggle');
+        const howToPlayContent = document.getElementById('howToPlayContent');
+
+        // Game variables
+        let dot = {
+            x: canvas.width / 2, // Initial X position (center of canvas)
+            y: canvas.height / 2, // Y position (center of canvas)
+            radius: 15, // Radius of the dot
+            dx: 3, // Slower initial speed of the dot
+            speedMultiplier: 1.0 // Multiplier to increase speed over time
+        };
+
+        // Initial safe zone dimensions
+        const SAFE_ZONE_INITIAL_WIDTH = 40;
+        const SAFE_ZONE_MIN_WIDTH = 5; // Minimum width for the safe zone
+
+        let safeZone = {
+            width: SAFE_ZONE_INITIAL_WIDTH, // Width of the safe zone
+            x: (canvas.width / 2) - (SAFE_ZONE_INITIAL_WIDTH / 2), // X position of the safe zone (centered)
+            y: 0, // Y position (top of canvas)
+            height: canvas.height // Height (full canvas height)
+        };
+
+        let score = 0; // Current game score
+        let highScore = localStorage.getItem('jumpingDotHighScore') || 0; // Load high score from local storage
+        let gameRunning = false; // Flag to indicate if the game is active
+        let animationFrameId; // To store the ID of the requestAnimationFrame call for cancellation
+        let confirmResetActive = false; // Flag for high score reset confirmation
+
+        /**
+         * Initializes the game state and UI elements.
+         */
+        function initializeGame() {
+            score = 0;
+            dot.x = canvas.width / 2; // Reset dot position to center
+            dot.dx = 3; // Reset dot speed to initial slower speed
+            dot.speedMultiplier = 1.0; // Reset speed multiplier
+            gameRunning = false;
+            confirmResetActive = false; // Reset confirmation flag
+
+            // Reset safe zone to initial width and re-center
+            safeZone.width = SAFE_ZONE_INITIAL_WIDTH;
+            safeZone.x = (canvas.width / 2) - (safeZone.width / 2);
+
+            updateScoreDisplay();
+            displayMessage("Game not running, click Start to play!"); // Updated initial message
+            draw(); // Draw initial state
+            // Ensure buttons are in correct state
+            startButton.textContent = "Start Game";
+            startButton.disabled = false; // Ensure start button is enabled
+            resetButton.textContent = "Reset High Score"; // Restore reset button text
+        }
+
+        /**
+         * Updates the score displays on the UI.
+         */
+        function updateScoreDisplay() {
+            currentScoreDisplay.textContent = score;
+            highScoreDisplay.textContent = highScore;
+        }
+
+        /**
+         * Displays a message in the message box with optional styling.
+         * @param {string} message - The message to display.
+         * @param {string} type - Optional type ('game-over', 'perfect-hit', 'confirm-reset', 'winner') for styling.
+         */
+        function displayMessage(message, type = '') {
+            messageBox.textContent = message;
+            messageBox.className = 'message-box'; // Reset classes
+            if (type) {
+                messageBox.classList.add(type);
+            }
+        }
+
+        /**
+         * Draws the game elements (canvas background, safe zone, dot).
+         */
+        function draw() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the safe zone
+            ctx.fillStyle = 'rgba(0, 128, 0, 0.3)'; // Semi-transparent green
+            ctx.fillRect(safeZone.x, safeZone.y, safeZone.width, safeZone.height);
+
+            // Draw the dot
+            ctx.beginPath();
+            ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ff6347'; // Tomato red color for the dot
+            ctx.fill();
+            ctx.strokeStyle = '#cd5c5c'; // Darker red border
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        /**
+         * Updates the dot's position and handles boundary collisions.
+         */
+        function update() {
+            // Move the dot
+            dot.x += dot.dx * dot.speedMultiplier;
+
+            // Reverse direction if hitting canvas boundaries
+            if (dot.x + dot.radius > canvas.width || dot.x - dot.radius < 0) {
+                dot.dx *= -1; // Reverse direction
+            }
+        }
+
+        /**
+         * The main game animation loop.
+         */
+        function gameLoop() {
+            if (!gameRunning) {
+                return; // Stop the loop if game is not running
+            }
+            update(); // Update dot position
+            draw(); // Redraw elements
+            animationFrameId = requestAnimationFrame(gameLoop); // Continue the loop
+        }
+
+        /**
+         * Handles a click event on the canvas.
+         * Checks if the dot is within the safe zone and updates game state accordingly.
+         */
+        function handleCanvasClick() {
+            // If a reset confirmation is active, clicking canvas should cancel it
+            if (confirmResetActive) {
+                confirmResetActive = false;
+                resetButton.textContent = "Reset High Score";
+                displayMessage("Game not running, click Start to play!"); // Revert message
+            }
+
+            if (!gameRunning) {
+                // Check the text content of the start button to display the appropriate message
+                if (startButton.textContent === "Start Game") {
+                    displayMessage("Game not running, click Start to play!", 'game-over');
+                } else if (startButton.textContent === "Play Again") {
+                    displayMessage("Game not running, click Play Again to begin. Game Over!", 'game-over');
+                }
+                return;
+            }
+
+            // Check if the dot's center is within the safe zone's X boundaries
+            if (dot.x >= safeZone.x && dot.x <= safeZone.x + safeZone.width) {
+                // Perfect hit!
+                score++;
+                displayMessage("Perfect Tap!", 'perfect-hit');
+                // Increase speed slightly (changed from 0.03 to 0.04)
+                dot.speedMultiplier += 0.04;
+                // Reset dot position to a random side to make it less predictable
+                dot.x = (Math.random() < 0.5) ? dot.radius : canvas.width - dot.radius;
+                dot.dx *= -1; // Always reverse direction on a hit
+
+                // Shrink safe zone every 5 points
+                if (score > 0 && score % 5 === 0) {
+                    const shrinkAmount = 5; // Pixels to shrink
+                    safeZone.width = Math.max(SAFE_ZONE_MIN_WIDTH, safeZone.width - shrinkAmount); // Don't go below min width
+                    safeZone.x = (canvas.width / 2) - (safeZone.width / 2); // Re-center the safe zone
+                    displayMessage(`Safe zone shrunk! Score: ${score}`, 'perfect-hit'); // Indicate shrinking
+                }
+
+                // Check for winner condition
+                if (safeZone.width <= SAFE_ZONE_MIN_WIDTH) {
+                    gameRunning = false;
+                    cancelAnimationFrame(animationFrameId); // Stop the animation loop
+                    displayMessage(`Congratulations! You won with a score of ${score}!`, 'winner');
+                    startButton.textContent = "Play Again";
+                    startButton.disabled = false;
+                    updateScoreDisplay(); // Update score display one last time
+                    return; // Stop further processing for this click as game is won
+                }
+
+            } else {
+                // Miss! Game Over
+                gameRunning = false;
+                cancelAnimationFrame(animationFrameId); // Stop the animation loop
+
+                // Update high score if current score is greater
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('jumpingDotHighScore', highScore);
+                    displayMessage(`New High Score! Your score: ${score}`, 'game-over');
+                } else {
+                    displayMessage(`Game Over! Your score: ${score}. High Score: ${highScore}`, 'game-over');
+                }
+                startButton.textContent = "Play Again"; // Change button text
+                startButton.disabled = false; // Enable start button for play again
+            }
+            updateScoreDisplay(); // Always update score display after a click
+        }
+
+        /**
+         * Starts the game.
+         */
+        function startGame() {
+            // If a reset confirmation is active, starting a new game cancels it
+            if (confirmResetActive) {
+                confirmResetActive = false;
+                resetButton.textContent = "Reset High Score";
+            }
+
+            if (!gameRunning) {
+                initializeGame(); // Reset game state
+                gameRunning = true;
+                displayMessage("Click when the dot is in the green zone!");
+                gameLoop(); // Start the animation
+                startButton.textContent = "Playing...";
+                startButton.disabled = true; // Disable start button while playing
+            }
+        }
+
+        /**
+         * Handles the high score reset logic with a custom confirmation.
+         */
+        function resetHighScore() {
+            if (confirmResetActive) {
+                // Second click: confirm reset
+                localStorage.removeItem('jumpingDotHighScore');
+                highScore = 0;
+                // Reset safe zone to initial width and re-center
+                safeZone.width = SAFE_ZONE_INITIAL_WIDTH;
+                safeZone.x = (canvas.width / 2) - (safeZone.width / 2);
+
+                updateScoreDisplay();
+                displayMessage("High score has been reset!", 'perfect-hit'); // Use perfect-hit style for success
+                confirmResetActive = false; // Reset flag
+                resetButton.textContent = "Reset High Score"; // Restore button text
+                draw(); // Redraw canvas to show reset safe zone
+            } else {
+                // First click: ask for confirmation
+                confirmResetActive = true;
+                displayMessage("Click 'Reset High Score' again to confirm!", 'confirm-reset');
+                resetButton.textContent = "Confirm Reset";
+            }
+        }
+
+        /**
+         * Toggles the visibility of the "How to Play" content.
+         */
+        function toggleHowToPlay() {
+            howToPlayContent.classList.toggle('visible');
+        }
+
+        // Event Listeners
+        canvas.addEventListener('click', handleCanvasClick);
+        startButton.addEventListener('click', startGame);
+        resetButton.addEventListener('click', resetHighScore);
+        howToPlayToggle.addEventListener('click', toggleHowToPlay); // Event listener for the new toggle button
+
+        // Add a global click listener to hide "How to Play" when clicking outside
+        document.addEventListener('click', function(event) {
+            // Check if the howToPlayContent is visible
+            if (howToPlayContent.classList.contains('visible')) {
+                // Check if the click was outside the howToPlayContent and not on the howToPlayToggle button
+                if (!howToPlayContent.contains(event.target) && event.target !== howToPlayToggle) {
+                    howToPlayContent.classList.remove('visible');
+                }
+            }
+        });
+
+
+        // Initialize the game when the window loads
+        window.onload = initializeGame;
+
+    </script>
+</body>
+</html>
