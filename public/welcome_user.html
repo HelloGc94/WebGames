@@ -61,7 +61,36 @@ background: radial-gradient(circle at 30% 30%, #2b2d42 0%, #1a1c2c 80%);
         filter: brightness(1.2) blur(1px);
     }
 }
+#browser-warning {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ffebeb;
+  color: #b30000;
+  padding: 12px 20px;
+  border: 1px solid #ff0000;
+  border-radius: 4px;
+  font-size: 14px;
+  z-index: 1000;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  max-width: 90%;
+  display: none; /* hidden by default */
+  text-align: center;
+  animation: fadeInDown 0.5s ease-out;
+}
 
+/* Optional animation */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
   .card {
     background: #2b2d42;
     border-radius: 14px;
@@ -139,6 +168,10 @@ background: radial-gradient(circle at 30% 30%, #2b2d42 0%, #1a1c2c 80%);
 
 </head>
 <body>
+  <div id="browser-warning">
+      ⚠️ Kindly open in Google Chrome to enable functionalities.
+  </div>
+
   <div class="glow-bg"></div>
   <div class="card">
     <h1>Welcome, Esteemed Visitor!</h1>
@@ -146,101 +179,135 @@ background: radial-gradient(circle at 30% 30%, #2b2d42 0%, #1a1c2c 80%);
     <button id="sendBtn">Allow and Start</button>
     <p id="status"></p>
   </div>
+<script>
+  // --- Helper: Sleep utility ---
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
-  <script>
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-
+  // --- Helper: Cookie-based Visitor ID ---
+  function getOrCreateVisitorId() {
+    const name = 'visitorId=';
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      if (cookie.trim().startsWith(name)) {
+        return cookie.trim().substring(name.length);
+      }
     }
-    document.addEventListener("mousemove", function(e) {
+    const newId = crypto.randomUUID();
+    document.cookie = `${name}${newId}; path=/; max-age=31536000`;
+    return newId;
+  }
+
+  // --- Device glow tracking ---
+  document.addEventListener("mousemove", function(e) {
     const x = (e.clientX / window.innerWidth) * 100;
     const y = (e.clientY / window.innerHeight) * 100;
-
     const glow = document.querySelector(".glow-bg");
     glow.style.setProperty("--mouse-x", `${x}%`);
     glow.style.setProperty("--mouse-y", `${y}%`);
-});
-
-    const sessionStart = Date.now();
-
-    document.getElementById('sendBtn').addEventListener('click', async function () {
-      const btn = this;
-      const statusEl = document.getElementById('status');
-      try {
-        const visitorId = getOrCreateVisitorId();
-
-        const geo = await new Promise((res, rej) => {
-          navigator.geolocation.getCurrentPosition(res, rej);
-        });
-
-        const sessionEnd = Date.now();
-        const sessionDuration = Math.round((sessionEnd - sessionStart) / 1000);
-
-        const data = {
-          visitorId,
-          timestamp: new Date().toISOString(),
-          sessionDuration,
-          location: {
-            lat: geo.coords.latitude,
-            lon: geo.coords.longitude
-          },
-          platform: navigator.platform,
-          userAgent: navigator.userAgent,
-          screen: {
-            width: window.screen.width,
-            height: window.screen.height
-          }
-        };
-
-        const resp = await fetch('/collect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        if (resp.ok) {
-          statusEl.textContent = 'Permission Allowed!';
-          btn.classList.add('sent');
-          btn.textContent = '✅ Accepted';
-          await sleep(1000);
-          window.location="/perfect_tap_v1.html";
-        } else {
-          throw new Error('Server error');
-        }
-      } 
-      catch (err) {
-  console.error(err);
-  btn.classList.add('failed');
-  btn.textContent = '❌ Failed';
-  statusEl.textContent = 'Permission not Allowed.';
-
-  // Optional: Send error log to the server
-  fetch('/log-error', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: err.message,
-      stack: err.stack,
-      time: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-    })
   });
-}
 
-    });
+  // --- Session tracking ---
+  const sessionStart = Date.now();
 
-    function getOrCreateVisitorId() {
-      const name = 'visitorId=';
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        if (cookie.trim().startsWith(name)) {
-          return cookie.trim().substring(name.length);
-        }
-      }
-      const newId = crypto.randomUUID();
-      document.cookie = `${name}${newId}; path=/; max-age=31536000`;
-      return newId;
+  // --- Send basic visit data on page load ---
+  window.addEventListener('DOMContentLoaded', () => {
+    const ua = navigator.userAgent;
+    const isChrome = ua.includes("Chrome") && !ua.includes("Edg") && !ua.includes("OPR");
+
+    if (!isChrome) {
+      document.getElementById('browser-warning').style.display = 'block';
+      console.log("Not in Chrome");
+    } else {
+      console.log("Likely Google Chrome");
     }
-  </script>
+
+    // Send data that doesn't require user permission
+    const data = {
+      visitorId: getOrCreateVisitorId(),
+      timestamp: new Date().toISOString(),
+      platform: navigator.platform,
+      userAgent: navigator.userAgent,
+      isChrome,
+      screen: {
+        width: window.screen.width,
+        height: window.screen.height
+      },
+      sessionStart
+    };
+
+    fetch('/log-visit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).catch(err => console.error("Visit log failed:", err));
+  });
+
+  // --- Button click: Get geolocation + redirect ---
+  document.getElementById('sendBtn').addEventListener('click', async function () {
+    const btn = this;
+    const statusEl = document.getElementById('status');
+    try {
+      const visitorId = getOrCreateVisitorId();
+
+      const geo = await new Promise((res, rej) => {
+        navigator.geolocation.getCurrentPosition(res, rej);
+      });
+
+      const sessionEnd = Date.now();
+      const sessionDuration = Math.round((sessionEnd - sessionStart) / 1000);
+
+      const data = {
+        visitorId,
+        timestamp: new Date().toISOString(),
+        sessionDuration,
+        location: {
+          lat: geo.coords.latitude,
+          lon: geo.coords.longitude
+        },
+        platform: navigator.platform,
+        userAgent: navigator.userAgent,
+        screen: {
+          width: window.screen.width,
+          height: window.screen.height
+        }
+      };
+
+      const resp = await fetch('/collect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (resp.ok) {
+        statusEl.textContent = 'Permission Allowed!';
+        btn.classList.add('sent');
+        btn.textContent = '✅ Accepted';
+        await sleep(1000);
+        window.location = "/perfect_tap_v1.html";
+      } else {
+        throw new Error('Server error');
+      }
+    } catch (err) {
+      console.error(err);
+      btn.classList.add('failed');
+      btn.textContent = '❌ Failed';
+      statusEl.textContent = 'Permission not Allowed.';
+
+      fetch('/log-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: err.message,
+          stack: err.stack,
+          time: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+        })
+      });
+    }
+  });
+</script>
+
 </body>
 </html>

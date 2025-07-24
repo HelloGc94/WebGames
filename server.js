@@ -31,6 +31,11 @@ console.error = (...args) => {
   originalError(...args);
 };
 
+app.post('/log-visit', express.json(), (req, res) => {
+  console.log("Visitor log:", req.body);
+  res.sendStatus(200);
+});
+
 // ✅ /log-error route
 app.post('/log-error', (req, res) => {
   console.error('Client error:', req.body);
